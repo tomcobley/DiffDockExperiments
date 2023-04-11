@@ -1,6 +1,7 @@
 import os
 from argparse import FileType, ArgumentParser
 
+from glob import glob
 import numpy as np
 from Bio.PDB import PDBParser
 from Bio.Seq import Seq
@@ -11,6 +12,7 @@ parser = ArgumentParser()
 parser.add_argument('--data_dir', type=str, default='data/PDBBind_processed', help='')
 parser.add_argument('--chain_cutoff', type=int, default=10, help='')
 parser.add_argument('--out_file', type=str, default="data/pdbbind_sequences.fasta")
+parser.add_argument('--splits_dir', type=str, default=None)
 args = parser.parse_args()
 
 cutoff = args.chain_cutoff
@@ -47,6 +49,15 @@ three_to_one = {'ALA':	'A',
 'GLX':	'Z',
 'XAA':	'X',
 'XLE':	'J'}
+
+# Filter out the pdbs that are not in the splits_dir
+if args.splits_dir is not None:
+    pdbs_to_read = set()
+    for f in glob(args.splits_dir+'/*'):
+        with open(f, 'r') as f:
+            for line in f:
+                pdbs_to_read.add(line.strip("\n"))
+names = names if args.splits_dir is None else set(names).intersection(pdbs_to_read)
 
 sequences = []
 ids = []
