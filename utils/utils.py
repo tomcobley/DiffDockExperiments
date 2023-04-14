@@ -110,7 +110,7 @@ def get_model(args, device, t_to_sigma, no_parallel=False, confidence_mode=False
                         cross_distance_embed_dim=args.cross_distance_embed_dim,
                         batch_norm=not args.no_batch_norm,
                         dropout=args.dropout,
-                        use_second_order_repr=args.use_second_order_repr,
+                        use_order_repr=args.use_order_repr,
                         cross_max_distance=args.cross_max_distance,
                         dynamic_max_cross=args.dynamic_max_cross,
                         lm_embedding_type=lm_embedding_type,

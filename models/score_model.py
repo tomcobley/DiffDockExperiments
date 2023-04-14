@@ -93,7 +93,7 @@ class TensorProductScoreModel(torch.nn.Module):
     def __init__(self, t_to_sigma, device, timestep_emb_func, in_lig_edge_features=4, sigma_embed_dim=32, sh_lmax=2,
                  ns=16, nv=4, num_conv_layers=2, lig_max_radius=5, rec_max_radius=30, cross_max_distance=250,
                  center_max_distance=30, distance_embed_dim=32, cross_distance_embed_dim=32, no_torsion=False,
-                 scale_by_sigma=True, use_second_order_repr=False, batch_norm=True,
+                 scale_by_sigma=True, use_order_repr=1, batch_norm=True,
                  dynamic_max_cross=False, dropout=0.0, lm_embedding_type=None, confidence_mode=False,
                  confidence_dropout=0, confidence_no_batchnorm=False, num_confidence_outputs=1):
         super(TensorProductScoreModel, self).__init__()
@@ -128,12 +128,26 @@ class TensorProductScoreModel(torch.nn.Module):
         self.rec_distance_expansion = GaussianSmearing(0.0, rec_max_radius, distance_embed_dim)
         self.cross_distance_expansion = GaussianSmearing(0.0, cross_max_distance, cross_distance_embed_dim)
 
-        if use_second_order_repr:
+        if use_order_repr == 2:
             irrep_seq = [
                 f'{ns}x0e',
                 f'{ns}x0e + {nv}x1o + {nv}x2e',
                 f'{ns}x0e + {nv}x1o + {nv}x2e + {nv}x1e + {nv}x2o',
                 f'{ns}x0e + {nv}x1o + {nv}x2e + {nv}x1e + {nv}x2o + {ns}x0o'
+            ]
+        if use_order_repr == 3:
+            irrep_seq = [
+                f'{ns}x0e',
+                f'{ns}x0e + {nv}x1o + {nv}x2e + {nv}x3o',
+                f'{ns}x0e + {nv}x1o + {nv}x2e + {nv}x1e + {nv}x2o + {nv}x3o + {nv}x3e', # add on tensor products with previous layer and spherical harmonics 0e + 1o + 2e + 3o + 4e
+                f'{ns}x0e + {nv}x1o + {nv}x2e + {nv}x1e + {nv}x2o + {nv}x3o + {nv}x3e + {ns}x0o' # add on tensor products with previous layer and spherical harmonics 0e + 1o + 2e + 3o + 4e
+            ]
+        if use_order_repr == 1:
+            irrep_seq = [
+                f'{ns}x0e',
+                f'{ns}x0e',
+                f'{ns}x0e',
+                f'{ns}x0e',
             ]
         else:
             irrep_seq = [
@@ -142,7 +156,7 @@ class TensorProductScoreModel(torch.nn.Module):
                 f'{ns}x0e + {nv}x1o + {nv}x1e',
                 f'{ns}x0e + {nv}x1o + {nv}x1e + {ns}x0o'
             ]
-
+        
         lig_conv_layers, rec_conv_layers, lig_to_rec_conv_layers, rec_to_lig_conv_layers = [], [], [], []
         for i in range(num_conv_layers):
             in_irreps = irrep_seq[min(i, len(irrep_seq) - 1)]
