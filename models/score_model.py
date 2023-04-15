@@ -135,27 +135,28 @@ class TensorProductScoreModel(torch.nn.Module):
                 f'{ns}x0e + {nv}x1o + {nv}x2e + {nv}x1e + {nv}x2o',
                 f'{ns}x0e + {nv}x1o + {nv}x2e + {nv}x1e + {nv}x2o + {ns}x0o'
             ]
-        if use_order_repr == 3:
+        elif use_order_repr == 3:
             irrep_seq = [
                 f'{ns}x0e',
                 f'{ns}x0e + {nv}x1o + {nv}x2e + {nv}x3o',
                 f'{ns}x0e + {nv}x1o + {nv}x2e + {nv}x1e + {nv}x2o + {nv}x3o + {nv}x3e', # add on tensor products with previous layer and spherical harmonics 0e + 1o + 2e + 3o + 4e
                 f'{ns}x0e + {nv}x1o + {nv}x2e + {nv}x1e + {nv}x2o + {nv}x3o + {nv}x3e + {ns}x0o' # add on tensor products with previous layer and spherical harmonics 0e + 1o + 2e + 3o + 4e
             ]
-        if use_order_repr == 1:
+        elif use_order_repr == 0:
             irrep_seq = [
                 f'{ns}x0e',
                 f'{ns}x0e',
                 f'{ns}x0e',
                 f'{ns}x0e',
             ]
-        else:
+        else: # use order 1
             irrep_seq = [
                 f'{ns}x0e',
                 f'{ns}x0e + {nv}x1o',
                 f'{ns}x0e + {nv}x1o + {nv}x1e',
                 f'{ns}x0e + {nv}x1o + {nv}x1e + {ns}x0o'
             ]
+        print(f'Using irrep sequence with lmax {use_order_repr}: {irrep_seq}')
         
         lig_conv_layers, rec_conv_layers, lig_to_rec_conv_layers, rec_to_lig_conv_layers = [], [], [], []
         for i in range(num_conv_layers):
