@@ -134,15 +134,28 @@ def main_function():
     numel = sum([p.numel() for p in model.parameters()])
     print('Model with', numel, 'parameters')
 
+    numel_embedding = sum([p.numel() for n, p in model.named_parameters() if 'embedding' in n])
+    numel_conv = sum([p.numel() for n, p in model.named_parameters() if 'conv' in n])
+    numel_final_layer = sum([p.numel() for n, p in model.named_parameters() if 'final_layer' in n])
+
+    print(f'numel_embedding:   {numel_embedding:>7}')
+    print(f'numel_conv:        {numel_conv:>7}')
+    print(f'numel_final_layer: {numel_final_layer:>7}')
+
+    assert numel == numel_embedding + numel_conv + numel_final_layer
+
     if args.wandb:
         wandb.init(
             entity='diffdock-experiments',
             settings=wandb.Settings(start_method="fork"),
             project=args.project,
             name=args.run_name,
-            config=args
+            config=args,
         )
         wandb.log({'numel': numel})
+        wandb.log({'numel_embedding': numel_embedding})
+        wandb.log({'numel_conv': numel_conv})
+        wandb.log({'numel_final_layer': numel_final_layer})
 
     # record parameters
     run_dir = os.path.join(args.log_dir, args.run_name)
