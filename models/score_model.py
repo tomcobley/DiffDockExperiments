@@ -95,7 +95,8 @@ class TensorProductScoreModel(torch.nn.Module):
                  center_max_distance=30, distance_embed_dim=32, cross_distance_embed_dim=32, no_torsion=False,
                  scale_by_sigma=True, use_order_repr=1, batch_norm=True,
                  dynamic_max_cross=False, dropout=0.0, lm_embedding_type=None, confidence_mode=False,
-                 confidence_dropout=0, confidence_no_batchnorm=False, num_confidence_outputs=1):
+                 confidence_dropout=0, confidence_no_batchnorm=False, num_confidence_outputs=1, 
+                 even_irreps = True, odd_irreps = True, even_tr_irreps = True, odd_tr_irreps = True):
         super(TensorProductScoreModel, self).__init__()
         self.t_to_sigma = t_to_sigma
         self.in_lig_edge_features = in_lig_edge_features
@@ -115,6 +116,10 @@ class TensorProductScoreModel(torch.nn.Module):
         self.timestep_emb_func = timestep_emb_func
         self.confidence_mode = confidence_mode
         self.num_conv_layers = num_conv_layers
+        self.odd_irreps = odd_irreps
+        self.even_irreps = even_irreps
+        self.odd_tr_irreps = odd_tr_irreps
+        self.even_tr_irreps = even_tr_irreps
 
         self.lig_node_embedding = AtomEncoder(emb_dim=ns, feature_dims=lig_feature_dims, sigma_embed_dim=sigma_embed_dim)
         self.lig_edge_embedding = nn.Sequential(nn.Linear(in_lig_edge_features + sigma_embed_dim + distance_embed_dim, ns),nn.ReLU(), nn.Dropout(dropout),nn.Linear(ns, ns))
@@ -212,10 +217,19 @@ class TensorProductScoreModel(torch.nn.Module):
                 nn.Linear(ns, ns)
             )
 
+            print("Even irreps:", even_irreps)
+            print("Odd irreps:", odd_irreps)
+            if odd_irreps and even_irreps:
+                final_out_irreps = '2x1o + 2x1e'
+            elif odd_irreps:
+                final_out_irreps = '2x1o'
+            else:
+                final_out_irreps = '2x1e'
+            print("Final conv layer out irreps:", final_out_irreps)
             self.final_conv = TensorProductConvLayer(
                 in_irreps=self.lig_conv_layers[-1].out_irreps,
                 sh_irreps=self.sh_irreps,
-                out_irreps=f'2x1o + 2x1e',
+                out_irreps=final_out_irreps,
                 n_edge_features=2 * ns,
                 residual=False,
                 dropout=dropout,
@@ -233,17 +247,24 @@ class TensorProductScoreModel(torch.nn.Module):
                     nn.Linear(ns, ns)
                 )
                 self.final_tp_tor = o3.FullTensorProduct(self.sh_irreps, "2e")
+                if odd_tr_irreps and even_tr_irreps:
+                    final_out_irreps = f'{ns}x0o + {ns}x0e'
+                elif odd_tr_irreps:
+                    final_out_irreps = f'{ns}x0o'
+                else:
+                    final_out_irreps = f'{ns}x0e'
+                print("Final tor bond conv layer out irreps:", final_out_irreps)
                 self.tor_bond_conv = TensorProductConvLayer(
                     in_irreps=self.lig_conv_layers[-1].out_irreps,
                     sh_irreps=self.final_tp_tor.irreps_out,
-                    out_irreps=f'{ns}x0o + {ns}x0e',
+                    out_irreps=final_out_irreps,
                     n_edge_features=3 * ns,
                     residual=False,
                     dropout=dropout,
                     batch_norm=batch_norm
                 )
                 self.tor_final_layer = nn.Sequential(
-                    nn.Linear(2 * ns, ns, bias=False),
+                    nn.Linear((int(odd_tr_irreps)+int(even_tr_irreps)) * ns, ns, bias=False),
                     nn.Tanh(),
                     nn.Dropout(dropout),
                     nn.Linear(ns, 1, bias=False)
@@ -316,8 +337,8 @@ class TensorProductScoreModel(torch.nn.Module):
         center_edge_attr = torch.cat([center_edge_attr, lig_node_attr[center_edge_index[1], :self.ns]], -1)
         global_pred = self.final_conv(lig_node_attr, center_edge_index, center_edge_attr, center_edge_sh, out_nodes=data.num_graphs)
 
-        tr_pred = global_pred[:, :3] + global_pred[:, 6:9]
-        rot_pred = global_pred[:, 3:6] + global_pred[:, 9:]
+        tr_pred = global_pred[:, :3] + global_pred[:, 6:9] if self.odd_irreps and self.even_irreps else global_pred[:, :3]
+        rot_pred = global_pred[:, 3:6] + global_pred[:, 9:] if self.odd_irreps and self.even_irreps else global_pred[:, 3:6]
         data.graph_sigma_emb = self.timestep_emb_func(data.complex_t['tr'])
 
         # fix the magnitude of translational and rotational score vectors
