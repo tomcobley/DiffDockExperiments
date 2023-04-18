@@ -120,8 +120,8 @@ def get_model(args, device, t_to_sigma, no_parallel=False, confidence_mode=False
                             args.rmsd_classification_cutoff, list) else 1,
                         even_irreps=not args.no_even_irreps,
                         odd_irreps=not args.no_odd_irreps,
-                        even_tr_irreps=not args.no_even_tr_irreps,
-                        odd_tr_irreps=not args.no_odd_tr_irreps,)
+                        even_tor_irreps=not args.no_even_tor_irreps,
+                        odd_tor_irreps=not args.no_odd_tor_irreps,)
 
     if device.type == 'cuda' and not no_parallel:
         model = DataParallel(model)

@@ -96,7 +96,7 @@ class TensorProductScoreModel(torch.nn.Module):
                  scale_by_sigma=True, use_order_repr=1, batch_norm=True,
                  dynamic_max_cross=False, dropout=0.0, lm_embedding_type=None, confidence_mode=False,
                  confidence_dropout=0, confidence_no_batchnorm=False, num_confidence_outputs=1, 
-                 even_irreps = True, odd_irreps = True, even_tr_irreps = True, odd_tr_irreps = True):
+                 even_irreps = True, odd_irreps = True, even_tor_irreps = True, odd_tor_irreps = True):
         super(TensorProductScoreModel, self).__init__()
         self.t_to_sigma = t_to_sigma
         self.in_lig_edge_features = in_lig_edge_features
@@ -118,8 +118,8 @@ class TensorProductScoreModel(torch.nn.Module):
         self.num_conv_layers = num_conv_layers
         self.odd_irreps = odd_irreps
         self.even_irreps = even_irreps
-        self.odd_tr_irreps = odd_tr_irreps
-        self.even_tr_irreps = even_tr_irreps
+        self.odd_tor_irreps = odd_tor_irreps
+        self.even_tor_irreps = even_tor_irreps
 
         self.lig_node_embedding = AtomEncoder(emb_dim=ns, feature_dims=lig_feature_dims, sigma_embed_dim=sigma_embed_dim)
         self.lig_edge_embedding = nn.Sequential(nn.Linear(in_lig_edge_features + sigma_embed_dim + distance_embed_dim, ns),nn.ReLU(), nn.Dropout(dropout),nn.Linear(ns, ns))
