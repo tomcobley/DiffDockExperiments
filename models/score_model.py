@@ -128,7 +128,21 @@ class TensorProductScoreModel(torch.nn.Module):
         self.rec_distance_expansion = GaussianSmearing(0.0, rec_max_radius, distance_embed_dim)
         self.cross_distance_expansion = GaussianSmearing(0.0, cross_max_distance, cross_distance_embed_dim)
 
-        if use_order_repr == 2:
+        if use_order_repr == 0:
+            irrep_seq = [
+                f'{ns}x0e',
+                f'{ns}x0e',
+                f'{ns}x0e',
+                f'{ns}x0e',
+            ]
+        elif use_order_repr == 1:
+            irrep_seq = [
+                f'{ns}x0e',
+                f'{ns}x0e + {nv}x1o',
+                f'{ns}x0e + {nv}x1o + {nv}x1e',
+                f'{ns}x0e + {nv}x1o + {nv}x1e + {ns}x0o'
+            ]
+        elif use_order_repr == 2:
             irrep_seq = [
                 f'{ns}x0e',
                 f'{ns}x0e + {nv}x1o + {nv}x2e',
@@ -142,20 +156,9 @@ class TensorProductScoreModel(torch.nn.Module):
                 f'{ns}x0e + {nv}x1o + {nv}x2e + {nv}x1e + {nv}x2o + {nv}x3o + {nv}x3e', # add on tensor products with previous layer and spherical harmonics 0e + 1o + 2e + 3o + 4e
                 f'{ns}x0e + {nv}x1o + {nv}x2e + {nv}x1e + {nv}x2o + {nv}x3o + {nv}x3e + {ns}x0o' # add on tensor products with previous layer and spherical harmonics 0e + 1o + 2e + 3o + 4e
             ]
-        elif use_order_repr == 0:
-            irrep_seq = [
-                f'{ns}x0e',
-                f'{ns}x0e',
-                f'{ns}x0e',
-                f'{ns}x0e',
-            ]
-        else: # use order 1
-            irrep_seq = [
-                f'{ns}x0e',
-                f'{ns}x0e + {nv}x1o',
-                f'{ns}x0e + {nv}x1o + {nv}x1e',
-                f'{ns}x0e + {nv}x1o + {nv}x1e + {ns}x0o'
-            ]
+        else:
+            raise ValueError(f'Invalid order representation: {use_order_repr}')
+
         print(f'Using irrep sequence with lmax {use_order_repr}: {irrep_seq}')
         
         lig_conv_layers, rec_conv_layers, lig_to_rec_conv_layers, rec_to_lig_conv_layers = [], [], [], []
