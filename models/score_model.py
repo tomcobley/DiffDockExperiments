@@ -109,6 +109,7 @@ class TensorProductScoreModel(torch.nn.Module):
         self.distance_embed_dim = distance_embed_dim
         self.cross_distance_embed_dim = cross_distance_embed_dim
         self.sh_irreps = o3.Irreps.spherical_harmonics(lmax=sh_lmax)
+        print("Using spherical harmonics to tensor product with", self.sh_irreps)
         self.ns, self.nv = ns, nv
         self.scale_by_sigma = scale_by_sigma
         self.device = device
@@ -247,9 +248,9 @@ class TensorProductScoreModel(torch.nn.Module):
                     nn.Linear(ns, ns)
                 )
                 self.final_tp_tor = o3.FullTensorProduct(self.sh_irreps, "2e")
-                if odd_tr_irreps and even_tr_irreps:
+                if odd_tor_irreps and even_tor_irreps:
                     final_out_irreps = f'{ns}x0o + {ns}x0e'
-                elif odd_tr_irreps:
+                elif odd_tor_irreps:
                     final_out_irreps = f'{ns}x0o'
                 else:
                     final_out_irreps = f'{ns}x0e'
@@ -264,7 +265,7 @@ class TensorProductScoreModel(torch.nn.Module):
                     batch_norm=batch_norm
                 )
                 self.tor_final_layer = nn.Sequential(
-                    nn.Linear((int(odd_tr_irreps)+int(even_tr_irreps)) * ns, ns, bias=False),
+                    nn.Linear((int(odd_tor_irreps)+int(even_tor_irreps)) * ns, ns, bias=False),
                     nn.Tanh(),
                     nn.Dropout(dropout),
                     nn.Linear(ns, 1, bias=False)
