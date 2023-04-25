@@ -138,9 +138,9 @@ def main_function():
     numel_conv = sum([p.numel() for n, p in model.named_parameters() if 'conv' in n])
     numel_final_layer = sum([p.numel() for n, p in model.named_parameters() if 'final_layer' in n])
 
-    print(f'numel_embedding:   {numel_embedding:>7}')
-    print(f'numel_conv:        {numel_conv:>7}')
-    print(f'numel_final_layer: {numel_final_layer:>7}')
+    print(f'numel_embedding:   {numel_embedding:>10}')
+    print(f'numel_conv:        {numel_conv:>10}')
+    print(f'numel_final_layer: {numel_final_layer:>10}')
 
     assert numel == numel_embedding + numel_conv + numel_final_layer
 
