@@ -146,7 +146,7 @@ if not args.no_model:
 
 if args.wandb:
     run = wandb.init(
-        entity='entity',
+        entity='diffdock-experiments',
         settings=wandb.Settings(start_method="fork"),
         project=args.project,
         name=args.run_name,

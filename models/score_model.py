@@ -109,6 +109,7 @@ class TensorProductScoreModel(torch.nn.Module):
         self.distance_embed_dim = distance_embed_dim
         self.cross_distance_embed_dim = cross_distance_embed_dim
         self.sh_irreps = o3.Irreps.spherical_harmonics(lmax=sh_lmax)
+        print("Using spherical harmonics to tensor product with", self.sh_irreps)
         self.ns, self.nv = ns, nv
         self.scale_by_sigma = scale_by_sigma
         self.device = device
