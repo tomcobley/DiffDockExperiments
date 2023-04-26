@@ -141,6 +141,7 @@ def get_model(args, device, t_to_sigma, no_parallel=False, confidence_mode=False
                             even_tor_irreps=not args.no_even_tor_irreps,
                             odd_tor_irreps=not args.no_odd_tor_irreps,
                             sh_lmax = args.use_sh_lmax,
+                            use_so3=args.use_so3,
                             )
 
     if device.type == 'cuda' and not no_parallel:

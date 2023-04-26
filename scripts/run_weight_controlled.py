@@ -2,10 +2,10 @@ from simple_slurm import Slurm
 import subprocess
 
 
-def run(lmax, shlmax, ns, nv):
-    run_name = f'WC_lmax{lmax}_shlmax{shlmax}_nv{nv}_ns{ns}'
+def run(lmax, shlmax, ns, nv, use_so3=False):
+    run_name = f'WC_lmax{lmax}_shlmax{shlmax}_nv{nv}_ns{ns}{"_so3" if use_so3 else ""}'
 
-    cmd = f'python -m train --run_name {run_name} --test_sigma_intervals --esm_embeddings_path data/esm2_3billion_embeddings_P00918_split.pt --log_dir workdir --lr 1e-3 --tr_sigma_min 0.1 --tr_sigma_max 19 --rot_sigma_min 0.03 --rot_sigma_max 1.55 --batch_size 16 --ns {ns} --nv {nv} --num_conv_layers 5 --dynamic_max_cross --scheduler plateau --scale_by_sigma --dropout 0.1 --remove_hs --c_alpha_max_neighbors 24 --receptor_radius 15 --num_dataloader_workers 1 --cudnn_benchmark --val_inference_freq 5 --num_inference_complexes 500 --use_ema --scheduler_patience 30 --n_epochs 850 --wandb --split_train data/P00918_split/P00918_train --split_val data/P00918_split/P00918_val --split_test data/P00918_split/P00918_test --use_order_repr {lmax} --use_sh_lmax {shlmax}'
+    cmd = f'python -m train --run_name {run_name} --test_sigma_intervals --esm_embeddings_path data/esm2_3billion_embeddings_P00918_split.pt --log_dir workdir --lr 1e-3 --tr_sigma_min 0.1 --tr_sigma_max 19 --rot_sigma_min 0.03 --rot_sigma_max 1.55 --batch_size 16 --ns {ns} --nv {nv} --num_conv_layers 5 --dynamic_max_cross --scheduler plateau --scale_by_sigma --dropout 0.1 --remove_hs --c_alpha_max_neighbors 24 --receptor_radius 15 --num_dataloader_workers 1 --cudnn_benchmark --val_inference_freq 5 --num_inference_complexes 500 --use_ema --scheduler_patience 30 --n_epochs 850 --wandb --split_train data/P00918_split/P00918_train --split_val data/P00918_split/P00918_val --split_test data/P00918_split/P00918_test --use_order_repr {lmax} --use_sh_lmax {shlmax} {"--use_so3" if use_so3 else ""} '
 
     slurm = Slurm(
         c=8, 
@@ -170,6 +170,16 @@ numel_sm_wc_shlmax = {
     }
 }
 
+numel_original_so3 = {
+    1: {
+        'ns': 9,
+        'nv': 2,
+        'numel_embedding': 5850,
+        'numel_conv': 89364,
+        'numel_final_layer': 803,
+    }
+}
+
 # for order in [0, 1, 2, 3]:
 #     # Scale calculated using model sizes above
 #     scale = numel_sm[order]['numel_conv'] / numel_sm[0]['numel_conv']
@@ -180,8 +190,11 @@ numel_sm_wc_shlmax = {
 #     run(order, round(ns), round(nv))
 
 # for order in [0, 1, 2, 3]:
-for order in [2, 3]:
-    run(order, order+1, numel_sm_wc_shlmax[order]['ns'], numel_sm_wc_shlmax[order]['nv'])
+# for order in [2, 3]:
+    # run(order, order+1, numel_sm_wc_shlmax[order]['ns'], numel_sm_wc_shlmax[order]['nv'])
 
 # order = 0
 # run(order, numel_sm_wc[order]['ns'], numel_sm_wc[order]['nv'])
+
+
+run(1, 2, numel_original_so3[1]['ns'], numel_original_so3[1]['nv'], use_so3=True)

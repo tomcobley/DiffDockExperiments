@@ -76,6 +76,7 @@ def parse_train_args():
     parser.add_argument('--no_batch_norm', action='store_true', default=False, help='If set, it removes the batch norm')
     parser.add_argument('--use_second_order_repr', action='store_true', default=False, help='Whether to use only up to first order representations or also second') # only for confidence model
     parser.add_argument('--use_order_repr', type=int, default=1, help='lmax of the spherical harmonics filter') # only for score model
+    parser.add_argument('--use_so3', default=False, action='store_true', help='whether to use only even spherical harmonics') # only for score model
     parser.add_argument('--cross_max_distance', type=float, default=80, help='Maximum cross distance in case not dynamic')
     parser.add_argument('--dynamic_max_cross', action='store_true', default=False, help='Whether to use the dynamic distance cutoff')
     parser.add_argument('--dropout', type=float, default=0.0, help='MLP dropout')
