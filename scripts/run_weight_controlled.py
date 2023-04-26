@@ -105,8 +105,41 @@ numel_sm_wc_incorrect = {
 }
 
 
-# Model sizes obtained using small model setup with correct empirical weight controlled ns, nv
-numel_sm_wc = {
+# # Model sizes obtained using small model setup with correct empirical weight controlled ns, nv
+# numel_sm_wc = {
+#     0: {
+#         'ns': 24,
+#         'nv': 6,
+#         'numel_embedding': 17400,
+#         'numel_conv': 999124,
+#         'numel_final_layer': 2858,
+#     },
+#     1: {
+#         'ns': 18,
+#         'nv': 5,
+#         'numel_embedding': 12510,
+#         'numel_conv': 1016860,
+#         'numel_final_layer': 1928,
+#     },
+#     2: {
+#         'ns': 16,
+#         'nv': 4,
+#         'numel_embedding': 10960,
+#         'numel_conv': 1034804,
+#         'numel_final_layer': 1650,
+#     },
+#     3: {
+#         'ns': 14,
+#         'nv': 4,
+#         'numel_embedding': 9450,
+#         'numel_conv': 966616,
+#         'numel_final_layer': 1388,
+#     }
+# }
+
+
+# Model sizes obtained using small model setup with correct empirical weight controlled ns, nv and accounting for shlmax
+numel_sm_wc_shlmax = {
     0: {
         'ns': 24,
         'nv': 6,
@@ -122,7 +155,7 @@ numel_sm_wc = {
         'numel_final_layer': 1928,
     },
     2: {
-        'ns': 16,
+        'ns': 15,
         'nv': 4,
         'numel_embedding': 10960,
         'numel_conv': 1034804,
@@ -130,7 +163,7 @@ numel_sm_wc = {
     },
     3: {
         'ns': 14,
-        'nv': 4,
+        'nv': 3,
         'numel_embedding': 9450,
         'numel_conv': 966616,
         'numel_final_layer': 1388,
@@ -148,7 +181,7 @@ numel_sm_wc = {
 
 # for order in [0, 1, 2, 3]:
 for order in [2, 3]:
-    run(order, order+1, numel_sm_wc[order]['ns'], numel_sm_wc[order]['nv'])
+    run(order, order+1, numel_sm_wc_shlmax[order]['ns'], numel_sm_wc_shlmax[order]['nv'])
 
 # order = 0
 # run(order, numel_sm_wc[order]['ns'], numel_sm_wc[order]['nv'])
