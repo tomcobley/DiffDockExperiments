@@ -487,6 +487,13 @@ class TensorProductScoreModel(torch.nn.Module):
         edge_length_emb = self.cross_distance_expansion(edge_vec.norm(dim=-1))
         edge_sigma_emb = data['ligand'].node_sigma_emb[src.long()]
         edge_attr = torch.cat([edge_sigma_emb, edge_length_emb], 1)
+        # !!!! sh_irreps contains even irreps
+        # no such thing as an even first order sh
+        # check what's in the 1e spot - probably just zeros (bad for expressivity)
+        # 2 versions - one for lying to the tensor product, one for actually calling sh
+        # this line is the only place we use 1o, 3o, etc
+        # check with mario & tess, seems like they may have been thinking of something else
+        # for all build_X_graph_fns FIXME
         edge_sh = o3.spherical_harmonics(self.sh_irreps, edge_vec, normalize=True, normalization='component')
 
         return edge_index, edge_attr, edge_sh
