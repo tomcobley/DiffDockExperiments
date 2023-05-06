@@ -83,6 +83,7 @@ def parse_train_args():
     parser.add_argument('--embedding_type', type=str, default="sinusoidal", help='Type of diffusion time embedding')
     parser.add_argument('--sigma_embed_dim', type=int, default=32, help='Size of the embedding of the diffusion time')
     parser.add_argument('--embedding_scale', type=int, default=1000, help='Parameter of the diffusion time embedding')
+    parser.add_argument('--use_1o_translations_1e_rotations', action='store_true', default=False, help='use only 1o translations and 1e rotations in final layer') # only for score model
     parser.add_argument('--no_odd_irreps', action='store_true', default=False, help='use no odd irreps in final layer') # only for score model
     parser.add_argument('--no_even_irreps', action='store_true', default=False, help='use no even irreps in final layer') # only for score model
     parser.add_argument('--no_odd_tor_irreps', action='store_true', default=False, help='use no odd torsion irreps in final layer') # only for score model

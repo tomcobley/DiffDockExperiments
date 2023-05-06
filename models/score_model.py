@@ -95,7 +95,7 @@ class TensorProductScoreModel(torch.nn.Module):
                  center_max_distance=30, distance_embed_dim=32, cross_distance_embed_dim=32, no_torsion=False,
                  scale_by_sigma=True, use_order_repr=1, batch_norm=True,
                  dynamic_max_cross=False, dropout=0.0, lm_embedding_type=None, confidence_mode=False,
-                 confidence_dropout=0, confidence_no_batchnorm=False, num_confidence_outputs=1, 
+                 confidence_dropout=0, confidence_no_batchnorm=False, num_confidence_outputs=1, use_1o_translations_1e_rotations = False,
                  even_irreps = True, odd_irreps = True, even_tor_irreps = True, odd_tor_irreps = True, use_so3 = False):
         super(TensorProductScoreModel, self).__init__()
         self.t_to_sigma = t_to_sigma
@@ -130,6 +130,7 @@ class TensorProductScoreModel(torch.nn.Module):
         self.timestep_emb_func = timestep_emb_func
         self.confidence_mode = confidence_mode
         self.num_conv_layers = num_conv_layers
+        self.use_1o_translations_1e_rotations = use_1o_translations_1e_rotations
         self.odd_irreps = odd_irreps
         self.even_irreps = even_irreps
         self.odd_tor_irreps = odd_tor_irreps
@@ -265,18 +266,21 @@ class TensorProductScoreModel(torch.nn.Module):
                 nn.Linear(ns, ns)
             )
 
-            print("Even irreps:", even_irreps)
+            print("Use SO3:", use_so3)
+            print("Use 1o translations 1e rotations:", use_1o_translations_1e_rotations)
             print("Odd irreps:", odd_irreps)
+            print("Even irreps:", even_irreps)
             if use_so3:
                 final_out_irreps = '2x1e'
+            elif use_1o_translations_1e_rotations:
+                final_out_irreps = '1x1o + 1x1e'
+            elif odd_irreps and even_irreps:
+                final_out_irreps = '2x1o + 2x1e'
+            elif odd_irreps:
+                final_out_irreps = '2x1o'
             else:
-                if odd_irreps and even_irreps:
-                    final_out_irreps = '2x1o + 2x1e'
-                elif odd_irreps:
-                    final_out_irreps = '2x1o'
-                else:
-                    final_out_irreps = '2x1e'
-            print("Final conv layer out irreps:", final_out_irreps)
+                final_out_irreps = '2x1e'
+            print("Final conv layer out irreps for translation and rotation:", final_out_irreps)
             self.final_conv = TensorProductConvLayer(
                 in_irreps=self.lig_conv_layers[-1].out_irreps,
                 sh_irreps=self.sh_irreps,
@@ -391,8 +395,16 @@ class TensorProductScoreModel(torch.nn.Module):
         center_edge_attr = torch.cat([center_edge_attr, lig_node_attr[center_edge_index[1], :self.ns]], -1)
         global_pred = self.final_conv(lig_node_attr, center_edge_index, center_edge_attr, center_edge_sh, out_nodes=data.num_graphs)
 
-        tr_pred = global_pred[:, :3] + global_pred[:, 6:9] if self.odd_irreps and self.even_irreps else global_pred[:, :3]
-        rot_pred = global_pred[:, 3:6] + global_pred[:, 9:] if self.odd_irreps and self.even_irreps else global_pred[:, 3:6]
+        if self.use_1o_translations_1e_rotations or self.use_so3:
+            tr_pred = global_pred[:, :3]
+            rot_pred = global_pred[:, 3:6]
+        elif self.odd_irreps and self.even_irreps:
+            tr_pred = global_pred[:, :3] + global_pred[:, 6:9] 
+            rot_pred = global_pred[:, 3:6] + global_pred[:, 9:]
+        else:
+            tr_pred = global_pred[:, :3]
+            rot_pred = global_pred[:, 3:6]
+        
         data.graph_sigma_emb = self.timestep_emb_func(data.complex_t['tr'])
 
         # fix the magnitude of translational and rotational score vectors

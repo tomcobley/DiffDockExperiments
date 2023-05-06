@@ -136,6 +136,7 @@ def get_model(args, device, t_to_sigma, no_parallel=False, confidence_mode=False
                             num_confidence_outputs=len(
                                 args.rmsd_classification_cutoff) + 1 if 'rmsd_classification_cutoff' in args and isinstance(
                                 args.rmsd_classification_cutoff, list) else 1,
+                            use_1o_translations_1e_rotations = args.use_1o_translations_1e_rotations,
                             even_irreps=not args.no_even_irreps,
                             odd_irreps=not args.no_odd_irreps,
                             even_tor_irreps=not args.no_even_tor_irreps,
