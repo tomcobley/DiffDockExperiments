@@ -21,7 +21,7 @@ def parse_train_args():
     parser.add_argument('--inference_earlystop_metric', type=str, default='valinf_rmsds_lt2', help='This is the metric that is addionally used when val_inference_freq is not None')
     parser.add_argument('--inference_earlystop_goal', type=str, default='max', help='Whether to maximize or minimize metric')
     parser.add_argument('--wandb', action='store_true', default=False, help='')
-    parser.add_argument('--project', type=str, default='difdock_train', help='')
+    parser.add_argument('--project', type=str, default='diffdock_train', help='')
     parser.add_argument('--run_name', type=str, default='', help='')
     parser.add_argument('--cudnn_benchmark', action='store_true', default=False, help='CUDA optimization parameter for faster training')
     parser.add_argument('--num_dataloader_workers', type=int, default=0, help='Number of workers for dataloader')
@@ -74,13 +74,21 @@ def parse_train_args():
     parser.add_argument('--distance_embed_dim', type=int, default=32, help='Embedding size for the distance')
     parser.add_argument('--cross_distance_embed_dim', type=int, default=32, help='Embeddings size for the cross distance')
     parser.add_argument('--no_batch_norm', action='store_true', default=False, help='If set, it removes the batch norm')
-    parser.add_argument('--use_second_order_repr', action='store_true', default=False, help='Whether to use only up to first order representations or also second')
+    parser.add_argument('--use_second_order_repr', action='store_true', default=False, help='Whether to use only up to first order representations or also second') # only for confidence model
+    parser.add_argument('--use_order_repr', type=int, default=1, help='lmax of the spherical harmonics filter') # only for score model
+    parser.add_argument('--use_so3', default=False, action='store_true', help='whether to use only even spherical harmonics') # only for score model
     parser.add_argument('--cross_max_distance', type=float, default=80, help='Maximum cross distance in case not dynamic')
     parser.add_argument('--dynamic_max_cross', action='store_true', default=False, help='Whether to use the dynamic distance cutoff')
     parser.add_argument('--dropout', type=float, default=0.0, help='MLP dropout')
     parser.add_argument('--embedding_type', type=str, default="sinusoidal", help='Type of diffusion time embedding')
     parser.add_argument('--sigma_embed_dim', type=int, default=32, help='Size of the embedding of the diffusion time')
     parser.add_argument('--embedding_scale', type=int, default=1000, help='Parameter of the diffusion time embedding')
+    parser.add_argument('--use_1o_translations_1e_rotations', action='store_true', default=False, help='use only 1o translations and 1e rotations in final layer') # only for score model
+    parser.add_argument('--no_odd_irreps', action='store_true', default=False, help='use no odd irreps in final layer') # only for score model
+    parser.add_argument('--no_even_irreps', action='store_true', default=False, help='use no even irreps in final layer') # only for score model
+    parser.add_argument('--no_odd_tor_irreps', action='store_true', default=False, help='use no odd torsion irreps in final layer') # only for score model
+    parser.add_argument('--no_even_tor_irreps', action='store_true', default=False, help='use no even torsion irreps in final layer') # only for score model
+    parser.add_argument('--use_sh_lmax', type=int, default=2, help='lmax of the spherical harmonics to tensor product with') # only for score model
 
     args = parser.parse_args()
     return args

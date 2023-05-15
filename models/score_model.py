@@ -93,9 +93,10 @@ class TensorProductScoreModel(torch.nn.Module):
     def __init__(self, t_to_sigma, device, timestep_emb_func, in_lig_edge_features=4, sigma_embed_dim=32, sh_lmax=2,
                  ns=16, nv=4, num_conv_layers=2, lig_max_radius=5, rec_max_radius=30, cross_max_distance=250,
                  center_max_distance=30, distance_embed_dim=32, cross_distance_embed_dim=32, no_torsion=False,
-                 scale_by_sigma=True, use_second_order_repr=False, batch_norm=True,
+                 scale_by_sigma=True, use_order_repr=1, batch_norm=True,
                  dynamic_max_cross=False, dropout=0.0, lm_embedding_type=None, confidence_mode=False,
-                 confidence_dropout=0, confidence_no_batchnorm=False, num_confidence_outputs=1):
+                 confidence_dropout=0, confidence_no_batchnorm=False, num_confidence_outputs=1, use_1o_translations_1e_rotations = False,
+                 even_irreps = True, odd_irreps = True, even_tor_irreps = True, odd_tor_irreps = True, use_so3 = False):
         super(TensorProductScoreModel, self).__init__()
         self.t_to_sigma = t_to_sigma
         self.in_lig_edge_features = in_lig_edge_features
@@ -107,7 +108,21 @@ class TensorProductScoreModel(torch.nn.Module):
         self.center_max_distance = center_max_distance
         self.distance_embed_dim = distance_embed_dim
         self.cross_distance_embed_dim = cross_distance_embed_dim
-        self.sh_irreps = o3.Irreps.spherical_harmonics(lmax=sh_lmax)
+        if use_so3:
+            if sh_lmax == 0:
+                self.sh_irreps = o3.Irreps('0e')
+            elif sh_lmax == 1:
+                self.sh_irreps = o3.Irreps('0e + 1e')
+            elif sh_lmax == 2:
+                self.sh_irreps = o3.Irreps('0e + 1e + 2e')
+            elif sh_lmax == 3:
+                self.sh_irreps = o3.Irreps('0e + 1e + 2e + 3e')
+            else:
+                raise NotImplementedError("Only sh_lmax = 0, 1, 2 supported for use_so3=True")
+        else:
+            self.sh_irreps = o3.Irreps.spherical_harmonics(lmax=sh_lmax)
+
+        print("Using spherical harmonics to tensor product with", self.sh_irreps)
         self.ns, self.nv = ns, nv
         self.scale_by_sigma = scale_by_sigma
         self.device = device
@@ -115,6 +130,12 @@ class TensorProductScoreModel(torch.nn.Module):
         self.timestep_emb_func = timestep_emb_func
         self.confidence_mode = confidence_mode
         self.num_conv_layers = num_conv_layers
+        self.use_1o_translations_1e_rotations = use_1o_translations_1e_rotations
+        self.odd_irreps = odd_irreps
+        self.even_irreps = even_irreps
+        self.odd_tor_irreps = odd_tor_irreps
+        self.even_tor_irreps = even_tor_irreps
+        self.use_so3 = use_so3
 
         self.lig_node_embedding = AtomEncoder(emb_dim=ns, feature_dims=lig_feature_dims, sigma_embed_dim=sigma_embed_dim)
         self.lig_edge_embedding = nn.Sequential(nn.Linear(in_lig_edge_features + sigma_embed_dim + distance_embed_dim, ns),nn.ReLU(), nn.Dropout(dropout),nn.Linear(ns, ns))
@@ -128,21 +149,72 @@ class TensorProductScoreModel(torch.nn.Module):
         self.rec_distance_expansion = GaussianSmearing(0.0, rec_max_radius, distance_embed_dim)
         self.cross_distance_expansion = GaussianSmearing(0.0, cross_max_distance, cross_distance_embed_dim)
 
-        if use_second_order_repr:
-            irrep_seq = [
-                f'{ns}x0e',
-                f'{ns}x0e + {nv}x1o + {nv}x2e',
-                f'{ns}x0e + {nv}x1o + {nv}x2e + {nv}x1e + {nv}x2o',
-                f'{ns}x0e + {nv}x1o + {nv}x2e + {nv}x1e + {nv}x2o + {ns}x0o'
-            ]
+        if use_so3:
+            # Use SO(3) (only even) spherical harmonics
+            if use_order_repr == 0:
+                irrep_seq = [
+                    f'{ns}x0e',
+                    f'{ns}x0e',
+                    f'{ns}x0e',
+                    f'{ns}x0e',
+                ]
+            elif use_order_repr == 1:
+                irrep_seq = [
+                    f'{ns}x0e',
+                    f'{ns}x0e + {nv}x1e',
+                    f'{ns}x0e + {nv}x1e',
+                    f'{ns}x0e + {nv}x1e'
+                ]
+            elif use_order_repr == 2:
+                irrep_seq = [
+                    f'{ns}x0e',
+                    f'{ns}x0e + {nv}x1e + {nv}x2e',
+                    f'{ns}x0e + {nv}x1e + {nv}x2e',
+                    f'{ns}x0e + {nv}x1e + {nv}x2e'
+                ]
+            elif use_order_repr == 3:
+                irrep_seq = [
+                    f'{ns}x0e',
+                    f'{ns}x0e + {nv}x1e + {nv}x2e + {nv}x3e',
+                    f'{ns}x0e + {nv}x1e + {nv}x2e + {nv}x3e',
+                    f'{ns}x0e + {nv}x1e + {nv}x2e + {nv}x3e',
+                ]
         else:
-            irrep_seq = [
-                f'{ns}x0e',
-                f'{ns}x0e + {nv}x1o',
-                f'{ns}x0e + {nv}x1o + {nv}x1e',
-                f'{ns}x0e + {nv}x1o + {nv}x1e + {ns}x0o'
-            ]
+            # Use original SE(3) (even and odd) spherical harmonics
+            if use_order_repr == 0:
+                irrep_seq = [
+                    f'{ns}x0e',
+                    f'{ns}x0e',
+                    f'{ns}x0e',
+                    f'{ns}x0e',
+                ]
+            elif use_order_repr == 1:
+                irrep_seq = [
+                    f'{ns}x0e',
+                    f'{ns}x0e + {nv}x1o',
+                    f'{ns}x0e + {nv}x1o + {nv}x1e',
+                    f'{ns}x0e + {nv}x1o + {nv}x1e + {ns}x0o'
+                ]
+            elif use_order_repr == 2:
+                irrep_seq = [
+                    f'{ns}x0e',
+                    f'{ns}x0e + {nv}x1o + {nv}x2e',
+                    f'{ns}x0e + {nv}x1o + {nv}x2e + {nv}x1e + {nv}x2o',
+                    f'{ns}x0e + {nv}x1o + {nv}x2e + {nv}x1e + {nv}x2o + {ns}x0o'
+                ]
+            elif use_order_repr == 3:
+                irrep_seq = [
+                    f'{ns}x0e',
+                    f'{ns}x0e + {nv}x1o + {nv}x2e + {nv}x3o',
+                    f'{ns}x0e + {nv}x1o + {nv}x2e + {nv}x1e + {nv}x2o + {nv}x3o + {nv}x3e', # add on tensor products with previous layer and spherical harmonics 0e + 1o + 2e + 3o + 4e
+                    f'{ns}x0e + {nv}x1o + {nv}x2e + {nv}x1e + {nv}x2o + {nv}x3o + {nv}x3e + {ns}x0o' # add on tensor products with previous layer and spherical harmonics 0e + 1o + 2e + 3o + 4e
+                ]
+            else:
+                raise ValueError(f'Invalid order representation: {use_order_repr}')
 
+
+        print(f'Using irrep sequence with lmax {use_order_repr}: {irrep_seq}')
+        
         lig_conv_layers, rec_conv_layers, lig_to_rec_conv_layers, rec_to_lig_conv_layers = [], [], [], []
         for i in range(num_conv_layers):
             in_irreps = irrep_seq[min(i, len(irrep_seq) - 1)]
@@ -194,10 +266,25 @@ class TensorProductScoreModel(torch.nn.Module):
                 nn.Linear(ns, ns)
             )
 
+            print("Use SO3:", use_so3)
+            print("Use 1o translations 1e rotations:", use_1o_translations_1e_rotations)
+            print("Odd irreps:", odd_irreps)
+            print("Even irreps:", even_irreps)
+            if use_so3:
+                final_out_irreps = '2x1e'
+            elif use_1o_translations_1e_rotations:
+                final_out_irreps = '1x1o + 1x1e'
+            elif odd_irreps and even_irreps:
+                final_out_irreps = '2x1o + 2x1e'
+            elif odd_irreps:
+                final_out_irreps = '2x1o'
+            else:
+                final_out_irreps = '2x1e'
+            print("Final conv layer out irreps for translation and rotation:", final_out_irreps)
             self.final_conv = TensorProductConvLayer(
                 in_irreps=self.lig_conv_layers[-1].out_irreps,
                 sh_irreps=self.sh_irreps,
-                out_irreps=f'2x1o + 2x1e',
+                out_irreps=final_out_irreps,
                 n_edge_features=2 * ns,
                 residual=False,
                 dropout=dropout,
@@ -215,17 +302,27 @@ class TensorProductScoreModel(torch.nn.Module):
                     nn.Linear(ns, ns)
                 )
                 self.final_tp_tor = o3.FullTensorProduct(self.sh_irreps, "2e")
+                if use_so3:
+                    final_out_irreps = f'{ns}x0e'
+                else:
+                    if odd_tor_irreps and even_tor_irreps:
+                        final_out_irreps = f'{ns}x0o + {ns}x0e'
+                    elif odd_tor_irreps:
+                        final_out_irreps = f'{ns}x0o'
+                    else:
+                        final_out_irreps = f'{ns}x0e'
+                print("Final tor bond conv layer out irreps:", final_out_irreps)
                 self.tor_bond_conv = TensorProductConvLayer(
                     in_irreps=self.lig_conv_layers[-1].out_irreps,
                     sh_irreps=self.final_tp_tor.irreps_out,
-                    out_irreps=f'{ns}x0o + {ns}x0e',
+                    out_irreps=final_out_irreps,
                     n_edge_features=3 * ns,
                     residual=False,
                     dropout=dropout,
                     batch_norm=batch_norm
                 )
                 self.tor_final_layer = nn.Sequential(
-                    nn.Linear(2 * ns, ns, bias=False),
+                    nn.Linear((int(odd_tor_irreps)+int(even_tor_irreps)) * ns, ns, bias=False),
                     nn.Tanh(),
                     nn.Dropout(dropout),
                     nn.Linear(ns, 1, bias=False)
@@ -298,8 +395,16 @@ class TensorProductScoreModel(torch.nn.Module):
         center_edge_attr = torch.cat([center_edge_attr, lig_node_attr[center_edge_index[1], :self.ns]], -1)
         global_pred = self.final_conv(lig_node_attr, center_edge_index, center_edge_attr, center_edge_sh, out_nodes=data.num_graphs)
 
-        tr_pred = global_pred[:, :3] + global_pred[:, 6:9]
-        rot_pred = global_pred[:, 3:6] + global_pred[:, 9:]
+        if self.use_1o_translations_1e_rotations or self.use_so3:
+            tr_pred = global_pred[:, :3]
+            rot_pred = global_pred[:, 3:6]
+        elif self.odd_irreps and self.even_irreps:
+            tr_pred = global_pred[:, :3] + global_pred[:, 6:9] 
+            rot_pred = global_pred[:, 3:6] + global_pred[:, 9:]
+        else:
+            tr_pred = global_pred[:, :3]
+            rot_pred = global_pred[:, 3:6]
+        
         data.graph_sigma_emb = self.timestep_emb_func(data.complex_t['tr'])
 
         # fix the magnitude of translational and rotational score vectors
@@ -394,6 +499,13 @@ class TensorProductScoreModel(torch.nn.Module):
         edge_length_emb = self.cross_distance_expansion(edge_vec.norm(dim=-1))
         edge_sigma_emb = data['ligand'].node_sigma_emb[src.long()]
         edge_attr = torch.cat([edge_sigma_emb, edge_length_emb], 1)
+        # !!!! sh_irreps contains even irreps
+        # no such thing as an even first order sh
+        # check what's in the 1e spot - probably just zeros (bad for expressivity)
+        # 2 versions - one for lying to the tensor product, one for actually calling sh
+        # this line is the only place we use 1o, 3o, etc
+        # check with mario & tess, seems like they may have been thinking of something else
+        # for all build_X_graph_fns FIXME
         edge_sh = o3.spherical_harmonics(self.sh_irreps, edge_vec, normalize=True, normalization='component')
 
         return edge_index, edge_attr, edge_sh
